@@ -15,12 +15,20 @@
   .logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--vns1),var(--vns2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
   .logo h1{font-size:18px;font-weight:700;color:#fff}
   .logo p{font-size:11px;color:var(--muted);margin-top:-2px}
-  .hdr-btns{display:flex;gap:6px;flex-wrap:wrap}
-  .hdr-btn{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;color:var(--text);font-size:11px;font-weight:600;cursor:pointer;font-family:'Sora',sans-serif}
+  .hdr-btns{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .hdr-btn{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;color:var(--text);font-size:11px;font-weight:600;cursor:pointer;font-family:'Sora',sans-serif;position:relative}
   .hdr-btn.admin{background:rgba(0,229,160,.12);border-color:var(--vns1);color:var(--vns1)}
   .hdr-btn.locked{background:rgba(100,116,139,.12)}
+  .badge-count{position:absolute;top:-5px;right:-5px;background:var(--danger);color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:50%;display:none;align-items:center;justify-content:center;padding:0 4px}
+  .badge-count.on{display:flex}
   .admin-bar{background:rgba(0,229,160,.08);border-bottom:1px solid var(--vns1b);padding:6px 20px;font-size:11px;color:var(--vns1);display:none;align-items:center;justify-content:space-between}
   .admin-bar.on{display:flex}
+  .notif-banner{display:none;padding:10px 20px;background:rgba(245,158,11,.12);border-bottom:1px solid rgba(245,158,11,.35);animation:slide .3s ease}
+  .notif-banner.on{display:block}
+  @keyframes slide{from{transform:translateY(-100%)}to{transform:translateY(0)}}
+  .notif-item{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--warn);padding:4px 0}
+  .notif-item+.notif-item{border-top:1px solid rgba(245,158,11,.2)}
+  .notif-close{background:transparent;border:none;color:var(--warn);cursor:pointer;font-size:16px;padding:0 6px}
   .date-nav{display:flex;align-items:center;gap:8px;padding:12px 20px 0}
   .dnav-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
   .date-display{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;text-align:center;cursor:pointer}
@@ -118,6 +126,12 @@
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:50px;font-size:13px;font-weight:600;z-index:300;transition:transform .3s;white-space:nowrap}
   .toast.show{transform:translateX(-50%) translateY(0)}
   .imp-info{background:rgba(14,165,233,.08);border:1px solid rgba(14,165,233,.25);border-radius:10px;padding:12px;font-size:12px;color:var(--blue);margin-bottom:12px;line-height:1.5}
+  .notif-list{max-height:300px;overflow-y:auto}
+  .notif-row{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+  .notif-row.fin{border-color:rgba(100,116,139,.4)}
+  .notif-row.sus{border-color:rgba(251,146,60,.4);background:rgba(251,146,60,.05)}
+  .notif-ttl{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px}
+  .notif-sub{font-size:11px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -130,6 +144,7 @@
   </div>
 </header>
 <div class="admin-bar" id="adminBar"><span>✅ Modo administrador ativo</span><button class="hdr-btn" onclick="logout()">Sair</button></div>
+<div class="notif-banner" id="notifBanner"></div>
 <div class="date-nav">
   <button class="dnav-btn" onclick="changeDay(-1)">‹</button>
   <div class="date-display" id="dateDisplay" onclick="openDatePicker()">
@@ -188,12 +203,20 @@
   <div class="mh"></div><h2>📋 Importar Lista</h2>
   <div class="imp-info">Cole o mapa no formato:<br>
   <b>VNS1</b><br>
-  05:00 - Cirurgia - Cirurgião<br>
+  05:00 - Cirurgia - Cirurgião - Leito<br>
+  06:00 - Outra - Dr(a)<br>
   <b>VNS2</b><br>
-  07:00 - Cirurgia - Cirurgião<br><br>
+  07:00 - Cirurgia - Cirurgião - 302B<br><br>
+  <b>Ordem:</b> Horário - Cirurgia - Cirurgião - Leito (opcional).<br>
   Cirurgias serão adicionadas na <b>data selecionada</b>.</div>
   <div class="ff"><label>Cole a lista aqui</label><textarea id="iTxt"></textarea></div>
   <div class="mbtns"><button class="bcn" onclick="closeImp()">Cancelar</button><button class="bsv v1" onclick="doImport()">Importar ✓</button></div>
+</div></div>
+
+<div class="ov" id="nOv"><div class="modal">
+  <div class="mh"></div><h2>🔔 Notificações</h2>
+  <div class="notif-list" id="notifList"></div>
+  <div class="mbtns"><button class="bcn" onclick="clearNotifs()" style="flex:1">Limpar todas</button><button class="bsv v1" onclick="closeNotifs()" style="flex:1">Fechar</button></div>
 </div></div>
 
 <div class="toast" id="toast"></div>
@@ -221,6 +244,9 @@ const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov
 let currentDate = new Date(); currentDate.setHours(0,0,0,0);
 let unsub = null, all = [], anests = [], editId = null, sala = 'vns1';
 let isAdmin = localStorage.getItem('escalavns_admin')==='1';
+let notifs = JSON.parse(localStorage.getItem('escalavns_notifs')||'[]');
+let prevStatus = {};
+let firstLoad = true;
 
 function dateKey(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
@@ -233,6 +259,44 @@ function fmt(d){
   document.getElementById('ddDate').textContent = `${String(d.getDate()).padStart(2,'0')} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+function saveNotifs(){ localStorage.setItem('escalavns_notifs', JSON.stringify(notifs.slice(0,50))); }
+
+function addNotif(surg, newStatus){
+  const lbl = newStatus==='finished'?'✅ Finalizada':'❌ Suspensa';
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  notifs.unshift({
+    id: Date.now()+Math.random(),
+    title: `${lbl}: ${surg.name}`,
+    sub: `${surg.sala.toUpperCase()} · ${surg.time} · ${surg.surgeon||'sem cirurgião'}`,
+    status: newStatus,
+    time: timeStr,
+    read: false
+  });
+  saveNotifs();
+  renderNotifBanner();
+  updateNotifBadge();
+}
+
+function renderNotifBanner(){
+  if(!isAdmin){ document.getElementById('notifBanner').classList.remove('on'); return; }
+  const unread = notifs.filter(n=>!n.read).slice(0,3);
+  const b = document.getElementById('notifBanner');
+  if(!unread.length){ b.classList.remove('on'); return; }
+  b.classList.add('on');
+  b.innerHTML = unread.map(n=>`<div class="notif-item"><span>${n.title} <small style="opacity:.7">· ${n.time}</small></span><button class="notif-close" onclick="window.markRead('${n.id}')">✕</button></div>`).join('');
+}
+
+function updateNotifBadge(){
+  const hb = document.getElementById('hdrBtns');
+  const btn = hb.querySelector('.notif-btn');
+  if(!btn) return;
+  const unread = notifs.filter(n=>!n.read).length;
+  const badge = btn.querySelector('.badge-count');
+  if(unread>0){ badge.classList.add('on'); badge.textContent = unread>9?'9+':unread; }
+  else badge.classList.remove('on');
+}
+
 function updateAdminUI(){
   const bar = document.getElementById('adminBar');
   const addB = document.getElementById('addBtns');
@@ -240,12 +304,15 @@ function updateAdminUI(){
   if(isAdmin){
     bar.classList.add('on');
     addB.classList.add('on');
-    hb.innerHTML = '<button class="hdr-btn" onclick="openImport()">📋 Importar</button><button class="hdr-btn" onclick="openAnestList()">👥</button>';
+    hb.innerHTML = '<button class="hdr-btn notif-btn" onclick="openNotifs()">🔔<span class="badge-count"></span></button><button class="hdr-btn" onclick="openImport()">📋 Importar</button><button class="hdr-btn" onclick="openAnestList()">👥</button>';
+    updateNotifBadge();
   } else {
     bar.classList.remove('on');
     addB.classList.remove('on');
     hb.innerHTML = '<button class="hdr-btn locked" onclick="openLogin()">🔐 Admin</button>';
+    document.getElementById('notifBanner').classList.remove('on');
   }
+  renderNotifBanner();
   render();
 }
 
@@ -256,9 +323,26 @@ function loadDate(d){
   document.getElementById('mainList').innerHTML = `<div class="loading"><div class="spinner"></div><p>Carregando...</p></div>`;
   document.getElementById('syncDot').className='sync-dot';
   document.getElementById('syncTxt').textContent='Conectando...';
+  firstLoad = true;
+  prevStatus = {};
   const q = query(col, where('date','==',dateKey(currentDate)));
   unsub = onSnapshot(q,(s)=>{
-    all = s.docs.map(d=>({id:d.id,...d.data()}));
+    const newAll = s.docs.map(d=>({id:d.id,...d.data()}));
+    // Detecta mudanças para notificar
+    if(!firstLoad && isAdmin){
+      for(const surg of newAll){
+        const prev = prevStatus[surg.id];
+        if(prev!==undefined && prev!==surg.status){
+          if(surg.status==='finished' || surg.status==='suspended'){
+            addNotif(surg, surg.status);
+          }
+        }
+      }
+    }
+    prevStatus = {};
+    newAll.forEach(x=>{ prevStatus[x.id] = x.status; });
+    firstLoad = false;
+    all = newAll;
     document.getElementById('syncDot').className='sync-dot live';
     document.getElementById('syncTxt').textContent='Ao vivo';
     render();
@@ -427,14 +511,42 @@ window.doImport = async ()=>{
     if(!rest.length){ skipped++; continue; }
     const name = rest[0];
     const surgeon = rest[1]||'';
+    const leito = rest[2]||'';
     try{
-      await addDoc(col,{sala:curSala,date:dateStr,time,name,surgeon,leito:'',anest:'',phone:'',status:'pending'});
+      await addDoc(col,{sala:curSala,date:dateStr,time,name,surgeon,leito,anest:'',phone:'',status:'pending'});
       count++;
     }catch(e){ skipped++; }
   }
   toast(`✅ ${count} importadas${skipped?` · ${skipped} ignoradas`:''}`);
   window.closeImp();
 };
+
+// Notificações
+window.openNotifs = ()=>{
+  renderNotifList();
+  notifs.forEach(n=>n.read=true);
+  saveNotifs();
+  document.getElementById('nOv').classList.add('open');
+  renderNotifBanner();
+  updateNotifBadge();
+};
+window.closeNotifs = ()=>document.getElementById('nOv').classList.remove('open');
+window.clearNotifs = ()=>{
+  if(confirm('Limpar todas as notificações?')){
+    notifs = []; saveNotifs(); renderNotifList(); renderNotifBanner(); updateNotifBadge();
+    toast('🔔 Notificações limpas');
+  }
+};
+window.markRead = (id)=>{
+  const n = notifs.find(x=>x.id==id);
+  if(n){ n.read=true; saveNotifs(); renderNotifBanner(); updateNotifBadge(); }
+};
+
+function renderNotifList(){
+  const el = document.getElementById('notifList');
+  if(!notifs.length){ el.innerHTML = '<p style="text-align:center;color:var(--muted);padding:20px;font-size:13px">Nenhuma notificação</p>'; return; }
+  el.innerHTML = notifs.map(n=>`<div class="notif-row ${n.status==='finished'?'fin':'sus'}"><div class="notif-ttl">${n.title}</div><div class="notif-sub">${n.sub} · ${n.time}</div></div>`).join('');
+}
 
 function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); }
 
@@ -443,6 +555,7 @@ document.getElementById('dpOv').addEventListener('click',e=>{ if(e.target.id==='
 document.getElementById('aOv').addEventListener('click',e=>{ if(e.target.id==='aOv') window.closeAL(); });
 document.getElementById('iOv').addEventListener('click',e=>{ if(e.target.id==='iOv') window.closeImp(); });
 document.getElementById('lOv').addEventListener('click',e=>{ if(e.target.id==='lOv') window.closeLogin(); });
+document.getElementById('nOv').addEventListener('click',e=>{ if(e.target.id==='nOv') window.closeNotifs(); });
 
 updateAdminUI();
 loadDate(new Date());
