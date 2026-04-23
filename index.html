@@ -72,8 +72,9 @@
   .card.sfin{opacity:.5}
   .card.ssus{opacity:.4;border-left-color:var(--orange)!important}
   .ch{display:flex;align-items:center;justify-content:space-between;padding:11px 14px 9px;border-bottom:1px solid var(--border)}
-  .tb{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-family:'DM Mono',monospace;font-size:14px;font-weight:500}
-  .c1 .tb{color:var(--vns1)}.c2 .tb{color:var(--vns2)}
+  .tb{border-radius:8px;padding:6px 14px;font-family:'DM Mono',monospace;font-size:17px;font-weight:700;letter-spacing:.5px;color:#fff}
+  .c1 .tb{background:var(--vns1);border:1px solid var(--vns1);box-shadow:0 2px 8px rgba(0,229,160,.35);color:#0a0f1e}
+  .c2 .tb{background:var(--vns2);border:1px solid var(--vns2);box-shadow:0 2px 8px rgba(167,139,250,.35);color:#fff}
   .sbg{display:flex;gap:4px}
   .sbtn{width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:var(--surface2);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center}
   .sbtn.acon{background:rgba(0,229,160,.15);border-color:var(--vns1)}
@@ -213,7 +214,7 @@
   <b>VNS2</b><br>
   07:00 - Cirurgia - Cirurgião - 302B<br><br>
   <b>Ordem:</b> Horário - Cirurgia - Cirurgião - Leito (opcional).<br>
-  Cirurgias serão adicionadas na <b>data selecionada</b>.</div>
+  Cirurgias duplicadas (mesma torre, horário e nome) serão ignoradas.</div>
   <div class="ff"><label>Cole a lista aqui</label><textarea id="iTxt"></textarea></div>
   <div class="mbtns"><button class="bcn" onclick="closeImp()">Cancelar</button><button class="bsv v1" onclick="doImport()">Importar ✓</button></div>
 </div></div>
@@ -228,7 +229,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDYkrbxndcEgH9uz0dNbkUF8gtNoAMe7OY",
@@ -252,6 +253,7 @@ let isAdmin = localStorage.getItem('escalavns_admin')==='1';
 let notifs = JSON.parse(localStorage.getItem('escalavns_notifs')||'[]');
 let prevStatus = {};
 let firstLoad = true;
+let importing = false;
 
 function dateKey(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
@@ -498,11 +500,17 @@ window.openImport = ()=>{ if(!isAdmin){toast('⚠️ Só admin');return;} docume
 window.closeImp = ()=>document.getElementById('iOv').classList.remove('open');
 window.doImport = async ()=>{
   if(!isAdmin){ toast('⚠️ Só admin'); return; }
+  if(importing){ toast('⏳ Importação em andamento...'); return; }
   const txt = document.getElementById('iTxt').value;
   if(!txt.trim()){ toast('⚠️ Cole a lista'); return; }
+  importing = true;
   const lines = txt.split('\n').map(l=>l.trim()).filter(l=>l);
-  let curSala = null, count = 0, skipped = 0;
+  let curSala = null, count = 0, skipped = 0, duplicates = 0;
   const dateStr = dateKey(currentDate);
+  const qExist = query(col, where('date','==',dateStr));
+  const snap = await getDocs(qExist);
+  const existing = snap.docs.map(d=>d.data());
+  const seenInThisImport = new Set();
   for(const line of lines){
     const u = line.toUpperCase().replace(/\s/g,'');
     if(u==='VNS1'||u.startsWith('VNS1-')||u.startsWith('VNS1:')){ curSala='vns1'; continue; }
@@ -516,12 +524,23 @@ window.doImport = async ()=>{
     const name = rest[0];
     const surgeon = rest[1]||'';
     const leito = rest[2]||'';
+    const key = `${curSala}|${time}|${name.toLowerCase()}`;
+    if(seenInThisImport.has(key)){ duplicates++; continue; }
+    seenInThisImport.add(key);
+    const alreadyExists = existing.some(x=>
+      x.sala===curSala && x.time===time && (x.name||'').toLowerCase()===name.toLowerCase()
+    );
+    if(alreadyExists){ duplicates++; continue; }
     try{
       await addDoc(col,{sala:curSala,date:dateStr,time,name,surgeon,leito,anest:'',phone:'',status:'pending'});
       count++;
     }catch(e){ skipped++; }
   }
-  toast(`✅ ${count} importadas${skipped?` · ${skipped} ignoradas`:''}`);
+  importing = false;
+  let msg = `✅ ${count} importadas`;
+  if(duplicates) msg += ` · ${duplicates} duplicadas ignoradas`;
+  if(skipped) msg += ` · ${skipped} com erro`;
+  toast(msg);
   window.closeImp();
 };
 
