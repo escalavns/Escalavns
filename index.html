@@ -315,13 +315,14 @@ window.closeMod = ()=>{ document.getElementById('sOv').classList.remove('open');
 
 window.saveSurg = async ()=>{
   const t=document.getElementById('fT').value, n=document.getElementById('fN').value.trim(), sr=document.getElementById('fS').value.trim(), l=document.getElementById('fL').value.trim(), aId=document.getElementById('fA').value;
-  if(!t||!n||!sr||!aId){ toast('⚠️ Preencha todos os campos'); return; }
-  const a = anests.find(x=>x.id===aId);
-  if(!a){ toast('⚠️ Anestesista inválido'); return; }
-  const dt = {sala,date:dateKey(currentDate),time:t,name:n,surgeon:sr,leito:l,anest:a.name,phone:a.phone||''};
+  if(!t||!n||!sr){ toast('⚠️ Preencha horário, cirurgia e cirurgião'); return; }
+  let anestName='A definir', phone='';
+  if(aId){ const a = anests.find(x=>x.id===aId); if(a){ anestName=a.name; phone=a.phone||''; } }
+  const dt = {sala,date:dateKey(currentDate),time:t,name:n,surgeon:sr,leito:l,anest:anestName,phone};
   if(editId){ await updateDoc(doc(db,'cirurgias',editId),dt); toast('✏️ Atualizada'); }
   else { await addDoc(col,{...dt,status:'pending'}); toast(`✅ Adicionada em ${sala.toUpperCase()}`); }
   window.closeMod();
+  
 };
 
 window.openAnestList = ()=>document.getElementById('aOv').classList.add('open');
