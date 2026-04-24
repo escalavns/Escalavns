@@ -93,10 +93,7 @@
   .pc2{background:rgba(167,139,250,.1);color:var(--vns2)}
   .ppr{background:rgba(14,165,233,.12);color:var(--blue);position:relative;overflow:hidden}
   .ppr::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(14,165,233,.5),transparent);animation:loadBar 1.6s linear infinite}
-  @keyframes loadBar{
-    0%{left:-100%}
-    100%{left:100%}
-  }
+  @keyframes loadBar{0%{left:-100%}100%{left:100%}}
   .pfi{background:rgba(100,116,139,.12);color:var(--muted)}
   .psu{background:rgba(251,146,60,.12);color:var(--orange)}
   .wbtn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:8px;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:10px;padding:9px;color:#25d366;font-size:12px;font-weight:700;text-decoration:none}
@@ -227,7 +224,7 @@
 
 <div class="toast" id="toast"></div>
 
-<script type="module">
+  <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -504,4 +501,82 @@ window.doImport = async ()=>{
   if(!txt.trim()){ toast('⚠️ Cole a lista'); return; }
   importing = true;
   const lines = txt.split('\n').map(l=>l.trim()).filter(l=>l);
-  let curS​​​​​​​​​​​​​​​​
+  let curSala = null, count = 0, skipped = 0, duplicates = 0;
+  const dateStr = dateKey(currentDate);
+  const qExist = query(col, where('date','==',dateStr));
+  const snap = await getDocs(qExist);
+  const existing = snap.docs.map(d=>d.data());
+  const seenInThisImport = new Set();
+  for(const line of lines){
+    const u = line.toUpperCase().replace(/\s/g,'');
+    if(u==='VNS1'||u.startsWith('VNS1-')||u.startsWith('VNS1:')){ curSala='vns1'; continue; }
+    if(u==='VNS2'||u.startsWith('VNS2-')||u.startsWith('VNS2:')){ curSala='vns2'; continue; }
+    if(!curSala) continue;
+    const m = line.match(/^(\d{1,2}):(\d{2})\s*[-–]\s*(.+)$/);
+    if(!m){ skipped++; continue; }
+    const time = `${m[1].padStart(2,'0')}:${m[2]}`;
+    const rest = m[3].split(/\s*[-–]\s*/).map(x=>x.trim()).filter(x=>x);
+    if(!rest.length){ skipped++; continue; }
+    const name = rest[0];
+    const surgeon = rest[1]||'';
+    const leito = rest[2]||'';
+    const key = `${curSala}|${time}|${name.toLowerCase()}`;
+    if(seenInThisImport.has(key)){ duplicates++; continue; }
+    seenInThisImport.add(key);
+    const alreadyExists = existing.some(x=>
+      x.sala===curSala && x.time===time && (x.name||'').toLowerCase()===name.toLowerCase()
+    );
+    if(alreadyExists){ duplicates++; continue; }
+    try{
+      await addDoc(col,{sala:curSala,date:dateStr,time,name,surgeon,leito,anest:'',phone:'',status:'pending'});
+      count++;
+    }catch(e){ skipped++; }
+  }
+  importing = false;
+  let msg = `✅ ${count} importadas`;
+  if(duplicates) msg += ` · ${duplicates} duplicadas ignoradas`;
+  if(skipped) msg += ` · ${skipped} com erro`;
+  toast(msg);
+  window.closeImp();
+};
+
+window.openNotifs = ()=>{
+  renderNotifList();
+  notifs.forEach(n=>n.read=true);
+  saveNotifs();
+  document.getElementById('nOv').classList.add('open');
+  renderNotifBanner();
+  updateNotifBadge();
+};
+window.closeNotifs = ()=>document.getElementById('nOv').classList.remove('open');
+window.clearNotifs = ()=>{
+  if(confirm('Limpar todas as notificações?')){
+    notifs = []; saveNotifs(); renderNotifList(); renderNotifBanner(); updateNotifBadge();
+    toast('🔔 Notificações limpas');
+  }
+};
+window.markRead = (id)=>{
+  const n = notifs.find(x=>x.id==id);
+  if(n){ n.read=true; saveNotifs(); renderNotifBanner(); updateNotifBadge(); }
+};
+
+function renderNotifList(){
+  const el = document.getElementById('notifList');
+  if(!notifs.length){ el.innerHTML = '<p style="text-align:center;color:var(--muted);padding:20px;font-size:13px">Nenhuma notificação</p>'; return; }
+  el.innerHTML = notifs.map(n=>`<div class="notif-row ${n.status==='finished'?'fin':'sus'}"><div class="notif-ttl">${n.title}</div><div class="notif-sub">${n.sub} · ${n.time}</div></div>`).join('');
+}
+
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); }
+
+document.getElementById('sOv').addEventListener('click',e=>{ if(e.target.id==='sOv') window.closeMod(); });
+document.getElementById('dpOv').addEventListener('click',e=>{ if(e.target.id==='dpOv') window.closeDP(); });
+document.getElementById('aOv').addEventListener('click',e=>{ if(e.target.id==='aOv') window.closeAL(); });
+document.getElementById('iOv').addEventListener('click',e=>{ if(e.target.id==='iOv') window.closeImp(); });
+document.getElementById('lOv').addEventListener('click',e=>{ if(e.target.id==='lOv') window.closeLogin(); });
+document.getElementById('nOv').addEventListener('click',e=>{ if(e.target.id==='nOv') window.closeNotifs(); });
+
+updateAdminUI();
+loadDate(new Date());
+</script>
+</body>
+</html>
