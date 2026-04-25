@@ -131,7 +131,7 @@ header{background:linear-gradient(135deg,#0d1b2e,#0a0f1e);border-bottom:1px soli
 .ff{margin-bottom:13px}
 .ff label{display:block;font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
 .ff input,.ff select,.ff textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-size:15px;font-family:'Sora',sans-serif;outline:none}
-.ff textarea{font-family:'DM Mono',monospace;font-size:12px;min-height:200px;resize:vertical}
+.ff textarea{font-family:'DM Mono',monospace;font-size:12px;min-height:120px;resize:vertical}
 .mbtns{display:flex;gap:10px;margin-top:20px}
 .bcn{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:12px;padding:14px;font-size:15px;cursor:pointer;font-weight:600;font-family:'Sora',sans-serif}
 .bsv{flex:2;border:none;border-radius:12px;padding:14px;font-size:15px;cursor:pointer;font-weight:700;font-family:'Sora',sans-serif}
@@ -167,6 +167,15 @@ header{background:linear-gradient(135deg,#0d1b2e,#0a0f1e);border-bottom:1px soli
 .saida-btn.mv{background:rgba(203,213,225,.1);color:var(--text);border:1px solid var(--border);width:26px;height:26px;padding:0;font-size:12px}
 .saida-btn.mv:disabled{opacity:.3;cursor:not-allowed}
 .saida-only-view{font-size:11px;color:var(--muted);text-align:center;padding:8px;background:var(--surface2);border-radius:8px;margin-bottom:10px}
+.rel-section{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px}
+.rel-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;gap:6px}
+.rel-title.cc{color:var(--vns1)}
+.rel-title.sadt{color:var(--orange)}
+.rel-title.hemo{color:var(--red)}
+.rel-list{font-size:13px;color:var(--text);line-height:1.7}
+.rel-empty{font-size:12px;color:var(--muted);font-style:italic}
+.rel-obs-display{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:12px;margin-bottom:10px;color:var(--text);font-size:13px;line-height:1.5;white-space:pre-wrap}
+.rel-obs-display.empty{color:var(--muted);font-style:italic}
 </style>
 </head>
 <body>
@@ -234,7 +243,7 @@ header{background:linear-gradient(135deg,#0d1b2e,#0a0f1e);border-bottom:1px soli
 <div class="ov" id="iOv"><div class="modal">
 <div class="mh"></div><h2>📋 Importar Lista</h2>
 <div class="imp-info">Cole o mapa no formato:<br><b>VNS1</b><br>05:00 - Cirurgia - Cirurgião - Leito<br>06:00 - Outra - Dr(a)<br><b>VNS2</b><br>07:00 - Cirurgia - Cirurgião - 302B</div>
-<div class="ff"><label>Cole a lista aqui</label><textarea id="iTxt"></textarea></div>
+<div class="ff"><label>Cole a lista aqui</label><textarea id="iTxt" style="min-height:200px"></textarea></div>
 <div class="mbtns"><button class="bcn" onclick="closeImp()">Cancelar</button><button class="bsv v1" onclick="doImport()">Importar ✓</button></div>
 </div></div>
 <div class="ov" id="nOv"><div class="modal">
@@ -253,10 +262,25 @@ header{background:linear-gradient(135deg,#0d1b2e,#0a0f1e);border-bottom:1px soli
 </div>
 <div class="mbtns" style="margin-top:14px"><button class="bcn" onclick="closeSaida()" style="flex:1">Fechar</button></div>
 </div></div>
+<div class="ov" id="rOv"><div class="modal">
+<div class="mh"></div><h2 id="relTitle">📊 Relatório do Dia</h2>
+<div id="relView">
+<div class="rel-obs-display empty" id="relObsDisplay">Nenhuma observação registrada.</div>
+<div class="rel-section"><div class="rel-title cc">🔪 Centro Cirúrgico</div><div class="rel-list" id="relCC"></div></div>
+<div class="rel-section"><div class="rel-title sadt">🏥 SADT</div><div class="rel-list" id="relSADT"></div></div>
+<div class="rel-section"><div class="rel-title hemo">🩸 Hemodinâmica</div><div class="rel-list" id="relHemo"></div></div>
+<button class="bsv v1" onclick="editRelObs()" style="width:100%;margin-top:6px">✏️ Editar Observações</button>
+</div>
+<div id="relEdit" style="display:none">
+<div class="ff"><label>Observações do Dia</label><textarea id="relObsInput" placeholder="Intercorrências, eventos importantes, observações gerais..." style="min-height:160px"></textarea></div>
+<div class="mbtns" style="margin-top:0"><button class="bcn" onclick="cancelRelObs()" style="flex:1">Cancelar</button><button class="bsv v1" onclick="saveRelObs()" style="flex:1">Salvar ✓</button></div>
+</div>
+<div class="mbtns"><button class="bcn" onclick="closeRel()" style="flex:1">Fechar</button><button class="bsv ed" onclick="copyRel()" style="flex:1">📋 Copiar</button></div>
+</div></div>
 <div class="toast" id="toast"></div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 const firebaseConfig = {apiKey:"AIzaSyDYkrbxndcEgH9uz0dNbkUF8gtNoAMe7OY",authDomain:"escala-vns.firebaseapp.com",projectId:"escala-vns",storageBucket:"escala-vns.firebasestorage.app",messagingSenderId:"913644431265",appId:"1:913644431265:web:8a492e0d9ad3ee190c0de0"};
 const ADMIN_PWD = "mmzggs0619";
 const app = initializeApp(firebaseConfig);
@@ -265,20 +289,24 @@ const col = collection(db,'cirurgias');
 const colA = collection(db,'anestesistas');
 const days = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const SADT_KEYWORDS = ['endoscopia','ecote','bmo','rnm','cetamina'];
+const SADT_SURGEONS = ['tt','tte'];
+const HEMO_KEYWORDS = ['cate','angiografia','arteriografia','quimio intra','químio intra','quimioterapia intra','drenagem biliar','ponte'];
 let currentDate = new Date(); currentDate.setHours(0,0,0,0);
 let unsub=null,unsubSaida=null,all=[],anests=[],saidaList=[],editId=null,sala='vns1';
 let isAdmin = localStorage.getItem('escalavns_admin')==='1';
 let notifs = JSON.parse(localStorage.getItem('escalavns_notifs')||'[]');
 let prevStatus={},firstLoad=true,importing=false,isEndo=false;
+let currentRelObs='';
 function dateKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function fmt(d){const t=new Date();t.setHours(0,0,0,0);const diff=Math.round((d-t)/86400000);const dd=document.getElementById('dateDisplay');dd.className='date-display '+(diff===0?'today':diff>0?'future':'past');document.getElementById('ddDay').textContent=days[d.getDay()];document.getElementById('ddDate').textContent=String(d.getDate()).padStart(2,'0')+' '+months[d.getMonth()]+' '+d.getFullYear();}
 function saveNotifs(){localStorage.setItem('escalavns_notifs',JSON.stringify(notifs.slice(0,50)));}
 function addNotif(surg,newStatus){let lbl;if(newStatus==='finished')lbl='✅ Finalizada';else if(newStatus==='suspended')lbl='❌ Suspensa';else if(newStatus==='external')lbl='⛔️ Externo';else return;const now=new Date();const timeStr=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');notifs.unshift({id:Date.now()+Math.random(),title:lbl+': '+surg.name,sub:surg.sala.toUpperCase()+' · '+(surg.time||'s/hr')+' · '+(surg.surgeon||'sem cirurgião'),status:newStatus,time:timeStr,read:false});saveNotifs();renderNotifBanner();updateNotifBadge();}
 function renderNotifBanner(){if(!isAdmin){document.getElementById('notifBanner').classList.remove('on');return;}const unread=notifs.filter(n=>!n.read).slice(0,3);const b=document.getElementById('notifBanner');if(!unread.length){b.classList.remove('on');return;}b.classList.add('on');b.innerHTML=unread.map(n=>'<div class="notif-item"><span>'+n.title+'</span><button class="notif-close" onclick="window.markRead(\''+n.id+'\')">✕</button></div>').join('');}
 function updateNotifBadge(){const badge=document.getElementById('sinoBadge');const unread=notifs.filter(n=>!n.read).length;if(badge){if(unread>0){badge.classList.add('on');badge.textContent=unread>9?'9+':unread;}else badge.classList.remove('on');}}
-function updateAdminUI(){const bar=document.getElementById('adminBar');const addB=document.getElementById('addBtns');const hb=document.getElementById('hdrBtns');if(isAdmin){bar.classList.add('on');addB.classList.add('on');hb.innerHTML='<div style="position:relative"><button class="hdr-btn sino" onclick="window.openNotifs()" title="Notificações">🔔<span class="badge-count" id="sinoBadge"></span></button></div><button class="hdr-btn casa" onclick="window.openSaida()" title="Escala de Saída">🏠</button><div style="position:relative"><button class="ham-btn" onclick="window.toggleHam(event)"><span></span><span></span><span></span></button><div class="ham-menu" id="hamMenu"><button class="ham-item" onclick="window.hamGo(\'import\')">📋 Importar</button><button class="ham-item" onclick="window.hamGo(\'anest\')">👥 Anestesistas</button></div></div><button class="hdr-btn" onclick="logout()">Sair</button>';updateNotifBadge();}else{bar.classList.remove('on');addB.classList.remove('on');hb.innerHTML='<button class="hdr-btn casa" onclick="window.openSaida()" title="Escala de Saída">🏠</button><button class="hdr-btn locked" onclick="openLogin()">🔐 Admin</button>';document.getElementById('notifBanner').classList.remove('on');}renderNotifBanner();render();}
+function updateAdminUI(){const bar=document.getElementById('adminBar');const addB=document.getElementById('addBtns');const hb=document.getElementById('hdrBtns');if(isAdmin){bar.classList.add('on');addB.classList.add('on');hb.innerHTML='<div style="position:relative"><button class="hdr-btn sino" onclick="window.openNotifs()" title="Notificações">🔔<span class="badge-count" id="sinoBadge"></span></button></div><button class="hdr-btn casa" onclick="window.openSaida()" title="Escala de Saída">🏠</button><div style="position:relative"><button class="ham-btn" onclick="window.toggleHam(event)"><span></span><span></span><span></span></button><div class="ham-menu" id="hamMenu"><button class="ham-item" onclick="window.hamGo(\'rel\')">📊 Relatórios</button><button class="ham-item" onclick="window.hamGo(\'import\')">📋 Importar</button><button class="ham-item" onclick="window.hamGo(\'anest\')">👥 Anestesistas</button></div></div><button class="hdr-btn" onclick="logout()">Sair</button>';updateNotifBadge();}else{bar.classList.remove('on');addB.classList.remove('on');hb.innerHTML='<button class="hdr-btn casa" onclick="window.openSaida()" title="Escala de Saída">🏠</button><button class="hdr-btn locked" onclick="openLogin()">🔐 Admin</button>';document.getElementById('notifBanner').classList.remove('on');}renderNotifBanner();render();}
 window.toggleHam=(e)=>{e.stopPropagation();const m=document.getElementById('hamMenu');if(m)m.classList.toggle('on');};
-window.hamGo=(w)=>{const m=document.getElementById('hamMenu');if(m)m.classList.remove('on');if(w==='import')window.openImport();else if(w==='anest')window.openAnestList();};
+window.hamGo=(w)=>{const m=document.getElementById('hamMenu');if(m)m.classList.remove('on');if(w==='import')window.openImport();else if(w==='anest')window.openAnestList();else if(w==='rel')window.openRel();};
 document.addEventListener('click',(e)=>{const m=document.getElementById('hamMenu');if(m && m.classList.contains('on') && !e.target.closest('.ham-btn') && !e.target.closest('.ham-menu')){m.classList.remove('on');}});
 function loadDate(d){if(unsub)unsub();if(unsubSaida)unsubSaida();currentDate=new Date(d);currentDate.setHours(0,0,0,0);fmt(currentDate);document.getElementById('mainList').innerHTML='<div class="loading"><div class="spinner"></div><p>Carregando...</p></div>';document.getElementById('syncDot').className='sync-dot';document.getElementById('syncTxt').textContent='Conectando...';firstLoad=true;prevStatus={};const q=query(col,where('date','==',dateKey(currentDate)));unsub=onSnapshot(q,(s)=>{const newAll=s.docs.map(d=>({id:d.id,...d.data()}));if(!firstLoad && isAdmin){for(const surg of newAll){const prev=prevStatus[surg.id];if(prev!==undefined && prev!==surg.status){if(surg.status==='finished'||surg.status==='suspended'||surg.status==='external'){addNotif(surg,surg.status);}}}}prevStatus={};newAll.forEach(x=>{prevStatus[x.id]=x.status;});firstLoad=false;all=newAll;document.getElementById('syncDot').className='sync-dot live';document.getElementById('syncTxt').textContent='Ao vivo';render();renderSaidaList();},(e)=>{document.getElementById('syncTxt').textContent='Erro: '+e.message;});loadSaida();}
 function loadSaida(){const dateStr=dateKey(currentDate);const dref=doc(db,'saidas',dateStr);unsubSaida=onSnapshot(dref,(snap)=>{if(snap.exists()){saidaList=snap.data().list||[];}else{saidaList=[];}renderSaidaList();});}
@@ -324,6 +352,15 @@ window.remSaida=async(idx)=>{if(!isAdmin)return;if(confirm('Remover '+saidaList[
 window.moveSaida=async(idx,dir)=>{if(!isAdmin)return;const newIdx=idx+dir;if(newIdx<0||newIdx>=saidaList.length)return;const tmp=saidaList[idx];saidaList[idx]=saidaList[newIdx];saidaList[newIdx]=tmp;await saveSaida();};
 function getAnestStatus(name){const cir=all.filter(c=>c.anest===name||c.anest2===name);if(!cir.length)return 'livre';const ocupada=cir.some(c=>c.status==='pending'||c.status==='confirmed'||c.status==='in-progress'||!c.status);return ocupada?'ocupado':'livre';}
 function renderSaidaList(){const el=document.getElementById('saidaList');if(!el)return;if(!saidaList.length){el.innerHTML='<p style="text-align:center;color:var(--muted);padding:20px;font-size:13px">Nenhum anestesista adicionado</p>';return;}el.innerHTML=saidaList.map((s,i)=>{const adminBtns=isAdmin?'<button class="saida-btn mv" onclick="window.moveSaida('+i+',-1)" '+(i===0?'disabled':'')+'>⬆️</button><button class="saida-btn mv" onclick="window.moveSaida('+i+',1)" '+(i===saidaList.length-1?'disabled':'')+'>⬇️</button>'+(s.liberado?'<button class="saida-btn unlib" onclick="window.unlibSaida('+i+')">↩️</button>':'<button class="saida-btn lib" onclick="window.liberarSaida('+i+')">🏠 Liberar</button>')+'<button class="saida-btn rem" onclick="window.remSaida('+i+')">✕</button>':'';const hrInfo=(s.liberado && isAdmin)?'<div class="saida-hr">🏠 Liberado às '+s.horario+'</div>':'';const stat=isAdmin?(s.liberado?'livre':getAnestStatus(s.name)):'';return '<div class="saida-row '+(s.liberado?'liberado':'')+'"><div class="saida-info"><div class="saida-name"><span class="saida-num '+stat+'">'+(i+1)+'</span>'+s.name+'</div>'+hrInfo+'</div><div class="saida-actions">'+adminBtns+'</div></div>';}).join('');}
+function classifySurg(s){const nome=(s.name||'').toLowerCase();const cir=(s.surgeon||'').toLowerCase().trim();for(const k of HEMO_KEYWORDS){if(nome.includes(k))return 'hemo';}for(const k of SADT_KEYWORDS){if(nome.includes(k))return 'sadt';}const cirParts=cir.split(/\s+/);if(cirParts.some(p=>SADT_SURGEONS.includes(p)))return 'sadt';return 'cc';}
+function getReportData(){const cats={cc:new Set(),sadt:new Set(),hemo:new Set()};for(const s of all){if(s.status==='suspended')continue;const cat=classifySurg(s);if(s.anest)cats[cat].add(s.anest);if(s.anest2)cats[cat].add(s.anest2);}return{cc:Array.from(cats.cc).sort((a,b)=>a.localeCompare(b)),sadt:Array.from(cats.sadt).sort((a,b)=>a.localeCompare(b)),hemo:Array.from(cats.hemo).sort((a,b)=>a.localeCompare(b))};}
+window.openRel=async()=>{if(!isAdmin){toast('⚠️ Só admin');return;}const dateStr=dateKey(currentDate);const dRef=doc(db,'relatorios',dateStr);try{const snap=await getDoc(dRef);currentRelObs=snap.exists()?(snap.data().obs||''):'';}catch(e){currentRelObs='';}document.getElementById('relTitle').textContent='📊 Relatório · '+String(currentDate.getDate()).padStart(2,'0')+'/'+months[currentDate.getMonth()];document.getElementById('relView').style.display='block';document.getElementById('relEdit').style.display='none';renderRel();document.getElementById('rOv').classList.add('open');};
+window.closeRel=()=>document.getElementById('rOv').classList.remove('open');
+function renderRel(){const data=getReportData();const obsEl=document.getElementById('relObsDisplay');if(currentRelObs && currentRelObs.trim()){obsEl.textContent=currentRelObs;obsEl.classList.remove('empty');}else{obsEl.textContent='Nenhuma observação registrada.';obsEl.classList.add('empty');}const fmt=arr=>arr.length?arr.map(n=>'• '+n).join('<br>'):'<span class="rel-empty">Nenhum anestesista</span>';document.getElementById('relCC').innerHTML=fmt(data.cc);document.getElementById('relSADT').innerHTML=fmt(data.sadt);document.getElementById('relHemo').innerHTML=fmt(data.hemo);}
+window.editRelObs=()=>{document.getElementById('relObsInput').value=currentRelObs;document.getElementById('relView').style.display='none';document.getElementById('relEdit').style.display='block';};
+window.cancelRelObs=()=>{document.getElementById('relView').style.display='block';document.getElementById('relEdit').style.display='none';};
+window.saveRelObs=async()=>{currentRelObs=document.getElementById('relObsInput').value;const dateStr=dateKey(currentDate);await setDoc(doc(db,'relatorios',dateStr),{obs:currentRelObs,date:dateStr});document.getElementById('relView').style.display='block';document.getElementById('relEdit').style.display='none';renderRel();toast('✅ Observação salva');};
+window.copyRel=async()=>{const data=getReportData();const dStr=String(currentDate.getDate()).padStart(2,'0')+'/'+months[currentDate.getMonth()]+'/'+currentDate.getFullYear();let txt='📊 RELATÓRIO · '+dStr+'\n\n';if(currentRelObs && currentRelObs.trim()){txt+='📝 OBSERVAÇÕES:\n'+currentRelObs+'\n\n';}txt+='🔪 CENTRO CIRÚRGICO:\n'+(data.cc.length?data.cc.map(n=>'• '+n).join('\n'):'(nenhum)')+'\n\n';txt+='🏥 SADT:\n'+(data.sadt.length?data.sadt.map(n=>'• '+n).join('\n'):'(nenhum)')+'\n\n';txt+='🩸 HEMODINÂMICA:\n'+(data.hemo.length?data.hemo.map(n=>'• '+n).join('\n'):'(nenhum)');try{await navigator.clipboard.writeText(txt);toast('📋 Copiado!');}catch(e){toast('❌ Não foi possível copiar');}};
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}
 document.getElementById('sOv').addEventListener('click',e=>{if(e.target.id==='sOv')window.closeMod();});
 document.getElementById('dpOv').addEventListener('click',e=>{if(e.target.id==='dpOv')window.closeDP();});
@@ -332,6 +369,7 @@ document.getElementById('iOv').addEventListener('click',e=>{if(e.target.id==='iO
 document.getElementById('lOv').addEventListener('click',e=>{if(e.target.id==='lOv')window.closeLogin();});
 document.getElementById('nOv').addEventListener('click',e=>{if(e.target.id==='nOv')window.closeNotifs();});
 document.getElementById('saOv').addEventListener('click',e=>{if(e.target.id==='saOv')window.closeSaida();});
+document.getElementById('rOv').addEventListener('click',e=>{if(e.target.id==='rOv')window.closeRel();});
 updateAdminUI();
 loadDate(new Date());
 </script>
